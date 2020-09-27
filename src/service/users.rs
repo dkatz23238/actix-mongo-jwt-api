@@ -1,10 +1,10 @@
-use crate::models::users::Claims;
+use crate::models::users::{Claims, UpdateUser};
 use bcrypt::{hash, verify};
 use chrono::prelude::*;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{doc, document::Document};
-use mongodb::error::Error;
+use mongodb::options::UpdateModifications;
 use mongodb::results::InsertOneResult;
 use mongodb::sync::Collection;
 use serde::{Deserialize, Serialize};
@@ -23,7 +23,7 @@ pub struct UserServiceError {
 // Value to return to user upon creation of user
 #[derive(Deserialize, Debug, Serialize)]
 pub struct MarshalledInsertOne {
-    _id: String,
+    pub _id: String,
 }
 
 impl fmt::Display for UserServiceError {
@@ -38,6 +38,7 @@ fn marshall_user(d: &Document) -> Document {
     let k = doc! {
       "_id":d.get("_id").unwrap().as_object_id().unwrap().to_hex(),
       "username":d.get("username").unwrap().as_str().unwrap(),
+      "email":d.get("email").unwrap().as_str().unwrap(),
       "organization":d.get("organization").unwrap().as_str().unwrap(),
       "role":d.get("role").unwrap().as_str().unwrap(),
     };
@@ -81,6 +82,7 @@ impl UserService {
             .collection
             .find_one(doc! {"username":username}, None)
             .unwrap();
+
         let check_email = self
             .collection
             .find_one(doc! {"email":email}, None)
@@ -140,6 +142,54 @@ impl UserService {
         res
     }
 
+    pub fn update(
+        &self,
+        user_id: &str,
+        updates: UpdateUser,
+    ) -> UserServiceResult<Option<Document>> {
+        let user_oid = ObjectId::with_string(user_id).map_err(|_| UserServiceError {
+            message: String::from("Failure making oid object."),
+        })?;
+
+        let mut updates_doc = Document::new();
+
+        if updates.email.is_some() {
+            updates_doc.insert("email", updates.email.unwrap());
+        }
+
+        if updates.username.is_some() {
+            updates_doc.insert("username", updates.username.unwrap());
+        }
+
+        let mods = UpdateModifications::Document(doc! {"$set":updates_doc});
+
+        let result = self
+            .collection
+            .find_one_and_update(doc! {"_id":user_oid}, mods, None);
+
+        match result {
+            Ok(_) => Ok(Some(doc! { "success":true})),
+            _ => Err(UserServiceError {
+                message: String::from("User not found."),
+            }),
+        }
+    }
+
+    pub fn delete(&self, user_id: &str) -> UserServiceResult<Option<Document>> {
+        let user_oid = ObjectId::with_string(user_id).map_err(|_| UserServiceError {
+            message: String::from("Failure making oid object."),
+        })?;
+
+        let res = self
+            .collection
+            .delete_one(doc! {"_id":user_oid}, None)
+            .map_err(|_| UserServiceError {
+                message: String::from("Failure finding user."),
+            })
+            .map(|_| Some(doc! {"success":true}));
+        res
+    }
+
     pub fn authenticate(
         &self,
         username: &str,
@@ -170,7 +220,7 @@ impl UserService {
             true => {
                 // println!("Wrapping Claims");
                 let my_claims = Claims {
-                    sub: user.get("username").unwrap().as_str().unwrap().to_owned(),
+                    sub: user.get("_id").unwrap().as_object_id().unwrap().to_hex(),
                     // TODO add role
                     role: user.get("role").unwrap().as_str().unwrap().to_owned(),
                     organization: user

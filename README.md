@@ -53,10 +53,22 @@ docker run --name mongodb  -p 27017:27017 -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB
 cargo test
 ```
 
+## Run tests with docker-compose
+
+```sh
+docker-compose -f tests.docker-compose.yml up
+```
+
 ## Run Web Server
 
 Restart or use a new database when running as the tests will seed the database with unwanted data.
 
 ```sh
 cargo run
+```
+
+## Run Python Integration Test
+
+```sh
+cd python_tests && pytest .
 ```

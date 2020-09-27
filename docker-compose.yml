@@ -1,0 +1,21 @@
+version: "2"
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  mongodb:
+    image: "bitnami/mongodb:latest"
+    networks:
+      - app-tier
+  myapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    networks:
+      - app-tier
+    depends_on:
+      - mongodb

@@ -45,6 +45,14 @@ pub struct User {
 }
 
 #[derive(Deserialize, Debug, Serialize, Validate)]
+pub struct UpdateUser {
+    #[validate(length(min = 3))]
+    pub username: Option<String>,
+    #[validate(email)]
+    pub email: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Serialize, Validate)]
 pub struct AuthorizedUser {
     pub token: String,
     pub sub: String,
@@ -75,10 +83,10 @@ impl FromRequest for AuthorizedUser {
                     }
 
                     let token_claims_res =
-                        decode::<Claims>(my_slice[1], &key, &Validation::new(Algorithm::HS256));
+                        decode::<Claims>(my_slice[1], &key, &Validation::new(Algorithm::RS256));
 
                     if token_claims_res.is_err() {
-                        dbg!("{:?}", token_claims_res);
+                        // dbg!("{:?}", token_claims_res);
                         return err(ErrorBadRequest("Not Authorized"));
                     }
 
