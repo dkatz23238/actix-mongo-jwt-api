@@ -17,7 +17,7 @@ use std::fs;
 fn get_public_key() -> String {
     let public_key_path: String = env::var("PUBLIC_KEY_PATH").unwrap();
     let public_key: String = fs::read_to_string(public_key_path).expect("Could not read file");
-    public_key
+    return public_key
 }
 
 lazy_static! {

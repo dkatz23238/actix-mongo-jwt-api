@@ -13,9 +13,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file: .env
     ports:
       - 3000:3000
     networks:
       - app-tier
     depends_on:
       - mongodb
+    volumes:
+      - .env:/.env:ro
+      - ./keys:/keys:ro

@@ -9,7 +9,7 @@ services:
     image: "bitnami/mongodb:latest"
     networks:
       - app-tier
-  myapp:
+  testing-app:
     build:
       context: .
       dockerfile: test.Dockerfile
